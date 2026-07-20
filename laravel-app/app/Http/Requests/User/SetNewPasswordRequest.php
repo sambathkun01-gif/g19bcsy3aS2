@@ -25,7 +25,7 @@ class SetNewPasswordRequest extends FormRequest
         return [
             'token' => 'required|string',
             'email' => 'required|email|exists:users,email',
-            'password' => 'required|string|min:6|max:10|confirmed'
+            'password' => 'required|string|min:6|max:20|confirmed'
         ];
     }
 }
