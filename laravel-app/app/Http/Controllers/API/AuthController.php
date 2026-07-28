@@ -66,8 +66,8 @@ class AuthController extends Controller
         $user->currentAccessToken()->delete();
 
         // option 2
-        $currentToken = $user->currentAccessToken();
-        $user->tokens()->where('id', $currentToken->id)->delete();
+        // $currentToken = $user->currentAccessToken();
+        // $user->tokens()->where('id', $currentToken->id)->delete();
 
         return response([
             'message' => 'User signed out.'
