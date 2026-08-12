@@ -29,19 +29,17 @@
             <div class="card card-primary card-outline">
               <div class="card-body box-profile">
                 <div class="text-center">
-                  <img class="profile-user-img img-fluid img-circle" :src="tempImage" alt="User profile picture" />
+                  <img class="profile-user-img img-fluid img-circle" :src=" userStore.profile_image  || emptyImage "alt="User profile picture" />
+                  ->
+                  <img v-if="selectedImageFile" class="profile-user-img img-fluid img-circle" :src=" tempImage "alt="User profile picture" />
                   <input @change="onChangeImage" type="file" class="d-none"
                     :accept="allowedExtensions.map((ext) => '.' + ext).join(', ')" id="file-input" />
                   <div class="mt-1">
                     <label :for="'file-input'">
                       <a type="button" class="m-1 btn btn-primary btn-sm"><i class="fas fa-upload"></i></a>
                     </label>
-                    <a type="button" @click="onDeleteImage()" class="m-1 btn btn-danger btn-sm"><i
-                        class="fas fa-trash"></i></a>
-                    <a type="button" @click="onResetImage()" class="m-1 btn btn-secondary btn-sm"><i
-                        class="fas fa-undo-alt"></i></a>
-                    <a v-if="imageChanged" type="button" @click="saveProfileImage()"
-                      class="m-1 btn btn-success btn-sm"><i class="fas fa-check"></i></a>
+                    <a type="button"  @click="deleteImage" class="m-1 btn btn-danger btn-sm"><i class="fas fa-trash"></i></a>
+                    <a  type="button" @click="uploadImage" v-if="selectedImageFile" class="m-1 btn btn-success btn-sm"><i class="fas fa-check"></i></a>
                   </div>
                 </div>
 
@@ -125,6 +123,7 @@ import {
   apiUpdateProfileImage,
 } from "@/functions/api/auth";
 import { useUserStore } from "@/stores/user";
+import Swal from "sweetalert2";
 const router = useRouter();
 const userStore = useUserStore();
 
@@ -181,19 +180,8 @@ async function savePassword() {
 }
 
 const tempImage = ref(null);
+const allowedExtensions = ["jpg", "png", "jpeg"];
 const selectedImageFile = ref(null);
-const profileImage = computed(() => userStore.profile_image);
-watch(
-  () => profileImage.value,
-  (nv) => (tempImage.value = nv ?? emptyImage),
-  { immediate: true }
-);
-
-const imageChanged = computed(
-  () => tempImage.value !== (profileImage.value ?? emptyImage)
-);
-const allowedExtensions = ["jpg", "jpeg", "png"];
-
 function onChangeImage(event) {
   const files = event.target.files;
   if (files && files.length > 0) {
@@ -235,28 +223,48 @@ function onChangeImage(event) {
     event.target.value = null;
   }
 }
-function onDeleteImage() {
-  selectedImageFile.value = null;
-  tempImage.value = emptyImage;
-}
-function onResetImage() {
-  selectedImageFile.value = null;
-  tempImage.value = userStore.profile_image ? userStore.profile_image : emptyImage;
+
+async function uploadImage(){
+  try{
+    LoadingModal();
+    const response = await apiUpdateProfileImage(selectedImageFile.value);
+    userStore.profile_image = response.data.profile_image;
+    userStore.profile_thumbnail = response.data.profile_thumbnail;
+    selectedImageFile.value = null;
+    return CloseModal();
+  }catch(error){
+     return MessageModal({ icon: "error", title: "Error", text: "Failed to process image. Please try again." });
+  }
 }
 
-async function saveProfileImage() {
-  try {
-    LoadingModal('Saving profile image...');
-    const isDeleting = tempImage.value === emptyImage;
-    const response = isDeleting
-      ? await apiDeleteProfileImage()
-      : await apiUpdateProfileImage(selectedImageFile.value);
-    userStore.profile_image = isDeleting ? null : response.data.profile_image;
-    userStore.profile_thumbnail = isDeleting ? null : response.data.profile_thumbnail;
-    selectedImageFile.value = null;
-    await MessageModal({ icon: "success", title: "Success", text: response.data.message });
-  } catch (error) {
-    return MessageModal({ icon: "error", title: "Error", text: error.response?.data?.message || error.message });
-  }
+async function deleteImage(){
+ await Swal.fire({
+    title: 'Are you sure you want to delete image?',
+    text: '',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#3085d6',
+    cancelButtonColor: '#d33',
+    confirmButtonText: 'Yes, Delete!'
+}).then(async (result) => {
+    if (result.isConfirmed) {
+        try {
+            LoadingModal();
+
+            const response = await apiDeleteProfileImage();
+
+            userStore.profile_image = null;
+            userStore.profile_thumbnail = null;
+
+            return CloseModal();
+        } catch (error) {
+            return MessageModal({
+                icon: "error",
+                title: "Error",
+                text: "Failed to process image. Please try again."
+            });
+        }
+    }
+});
 }
 </script>
