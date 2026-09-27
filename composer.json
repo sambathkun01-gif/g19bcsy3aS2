@@ -1,5 +1,6 @@
 {
     "require": {
-        "intervention/image": "^4.2"
+        "intervention/image": "^4.2",
+        "spatie/laravel-backup": "*"
     }
 }
