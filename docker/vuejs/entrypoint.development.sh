@@ -1,8 +1,5 @@
 #!/bin/sh
 set -e
 
-# rm -f package-lock.json
-# wait $!
-# npm install
-# wait $!
+npm ci
 npm run dev -- --host=0.0.0.0 --port=5173
