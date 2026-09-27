@@ -48,6 +48,12 @@ class AuthController extends Controller
             ]);
         }
 
+        if ($user->status === 'DISABLED') {
+            throw ValidationException::withMessages([
+                'email' => 'Your account has been disabled. Please contact support.',
+            ]);
+        }
+
         if (!Hash::check($request->password, $user->password)) {
             throw ValidationException::withMessages([
                 'password' => 'Password does not match.',
@@ -123,14 +129,6 @@ class AuthController extends Controller
 
     function sendResetPasswordEmail(SendResetPasswordEmailRequest $request)
     {
-        $user = User::where('email', $request->email)->first();
-
-        if (empty($user)) {
-            throw ValidationException::withMessages([
-                'email' => 'Email does not exist.',
-            ]);
-        }
-
         $status = Password::sendResetLink(
             ['email' => $request->email],
             function ($user, $token) use ($request) {
@@ -205,7 +203,7 @@ class AuthController extends Controller
                 'new_password' => 'New password must be different from current password.',
             ]);
         }
-        $user->password = $request->new_password;
+        $user->password = Hash::make($request->new_password);
         $user->save();
         $user->tokens()->delete();
         return response([
