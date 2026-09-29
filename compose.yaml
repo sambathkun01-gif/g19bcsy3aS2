@@ -11,6 +11,7 @@ services:
             - ./docker/laravel/supervisord.development.conf:/etc/supervisor/conf.d/supervisord.development.conf
         ports:
             - "8000:8000"
+            - "8080:8080"
         depends_on:
             - mysql-service
         command: [ "bash", "/usr/local/bin/entrypoint.development.sh" ]
@@ -23,7 +24,6 @@ services:
         working_dir: /app
         volumes:
             - ./vuejs-app:/app
-            - vuejs_node_modules:/app/node_modules
             - ./docker/vuejs/entrypoint.development.sh:/usr/local/bin/entrypoint.development.sh
         ports:
             - "5173:5173"
@@ -42,12 +42,6 @@ services:
             TZ: UTC
         volumes:
             - mysql_data:/var/lib/mysql
-        healthcheck:
-            test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-            interval: 10s
-            timeout: 5s
-            retries: 5
-            start_period: 30s
 
     phpmyadmin:
         image: phpmyadmin:5.2.2
@@ -64,4 +58,3 @@ services:
             - "9000:80"
 volumes:
     mysql_data:
-    vuejs_node_modules:
