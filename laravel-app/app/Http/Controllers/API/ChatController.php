@@ -7,6 +7,7 @@ use App\Events\ChatDeleted;
 use App\Events\ChatUpdated;
 use App\Events\MessageCreated;
 use App\Events\MessageDeleted;
+use App\Events\MessagesSeen;
 use App\Events\MessageUpdated;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Chat\AddGroupChatMemberRequest;
@@ -50,12 +51,15 @@ class ChatController extends Controller
         $keyword = $request->input('keyword', null);
         $perPage = $request->input('per_page', 25);
         $page = $request->input('page', 1);
+        $includeExistingPersonal = $request->boolean('include_existing_personal');
 
         $users = User::whereNot('id', $user->id)
-            ->whereDoesntHave('chats', function ($query) use ($user) {
-                $query->where('type', 'personal')
-                    ->whereHas('members', function ($query) use ($user) {
-                        $query->where('user_id', $user->id);
+            ->when(!$includeExistingPersonal, function ($query) use ($user) {
+                $query->whereDoesntHave('chats', function ($query) use ($user) {
+                    $query->where('type', 'personal')
+                        ->whereHas('members', function ($query) use ($user) {
+                            $query->where('user_id', $user->id);
+                        });
                     });
             })
             ->when($keyword, function ($query, $keyword) {
@@ -705,10 +709,18 @@ class ChatController extends Controller
             ->firstOrFail();
 
         // Mark all messages as seen except those created by current user
-        ChatMessage::where('chat_id', $chatId)
+        $unseenMessages = ChatMessage::where('chat_id', $chatId)
             ->where('creator_id', '!=', $user->id)
             ->whereNull('seen_at')
-            ->update(['seen_at' => now()]);
+            ->get(['id']);
+
+        if ($unseenMessages->isNotEmpty()) {
+            $seenAt = now();
+            $messageIds = $unseenMessages->modelKeys();
+
+            ChatMessage::whereKey($messageIds)->update(['seen_at' => $seenAt]);
+            broadcast(new MessagesSeen((int) $chatId, $messageIds, $seenAt->toISOString()))->toOthers();
+        }
 
         return response([
             'message' => 'All messages marked as seen.'

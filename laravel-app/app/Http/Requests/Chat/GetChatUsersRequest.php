@@ -26,6 +26,7 @@ class GetChatUsersRequest extends FormRequest
             'keyword' => 'nullable|string|max:50',
             'per_page' => 'nullable|integer|in:10,25,50,100,250',
             'page' => 'nullable|integer|min:1',
+            'include_existing_personal' => 'sometimes|boolean',
         ];
     }
 }

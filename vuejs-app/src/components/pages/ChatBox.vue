@@ -17,6 +17,10 @@
           </div>
           <div class="card-body">
             <div class="direct-chat-messages" style="min-height: calc(100vh - 280px)">
+              <div v-if="isLoadingMessages" class="text-center text-muted py-2" role="status">
+                <i class="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i>
+                {{ isLoadingMore ? 'Loading older messages...' : 'Loading messages...' }}
+              </div>
               <template v-for="message in chat?.messages" :key="message.id">
                 <div class="direct-chat-msg" :class="isOwnMessage(message) ? 'right' : 'left'">
                   <div class="direct-chat-infos clearfix">
@@ -64,6 +68,11 @@
                   <i v-if="isOwnMessage(message) && isTextMessage(message)" @click="startEditMessage(message)"
                     class="fas fa-edit text-primary float-right mt-1 mx-1" style="cursor: pointer;"
                     title="Edit message"></i>
+                  <span v-if="isOwnMessage(message) && message.seen_at" class="text-muted small float-right mt-1 mx-1"
+                    :title="chat?.type === 'group' ? 'First read by a group member' : 'Read by the other participant'">
+                    <i class="fas fa-check-double text-primary mr-1" aria-hidden="true"></i>
+                    Seen {{ formatSeenTime(message.seen_at) }}
+                  </span>
                 </div>
                 <hr>
               </template>
@@ -129,7 +138,7 @@ import { watch, ref, onMounted, computed } from "vue";
 import emptyImage from "@/assets/images/emptyImage.png";
 import { useUserStore } from '@/stores/user';
 import { useRecentChatsStore } from "@/stores/recentChats";
-import { formatChatTime } from "@/functions/datetime";
+import { formatChatTime, utcToLocal } from "@/functions/datetime";
 import { apiGetChatMessages, apiCreateChatMessage, apiCreateVoiceChatMessage, apiCreateImageChatMessage, apiUpdateChatMessage, apiDeleteChatMessage, apiMarkAllChatMessagesAsSeen } from "@/functions/api/chat";
 import $ from "jquery";
 import { apiReadChat } from "@/functions/api/chat";
@@ -163,6 +172,10 @@ function isOwnMessage(message) {
 
 function isTextMessage(message) {
   return message?.type === 'text';
+}
+
+function formatSeenTime(dateTime) {
+  return utcToLocal(dateTime)?.format('DD/MM/YYYY HH:mm') || '';
 }
 
 function startEditMessage(message) {
@@ -342,6 +355,7 @@ async function deleteMessage(messageId) {
 const currentPage = ref(1);
 const lastPage = ref(1);
 const pageSize = ref(25);
+const isLoadingMessages = ref(false);
 const isLoadingMore = ref(false);
 
 async function loadChat() {
@@ -358,6 +372,7 @@ async function loadChat() {
 }
 
 async function loadMessages(page = 1) {
+  isLoadingMessages.value = true;
   try {
     // Fetch from API
     const response = await apiGetChatMessages(props.chatId, {
@@ -371,6 +386,8 @@ async function loadMessages(page = 1) {
     lastPage.value = response.data.meta.last_page;
   } catch (error) {
     console.error('Error loading messages:', error);
+  } finally {
+    isLoadingMessages.value = false;
   }
 }
 

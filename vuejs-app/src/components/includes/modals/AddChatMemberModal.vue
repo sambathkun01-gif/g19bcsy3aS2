@@ -89,6 +89,7 @@ async function generateUsers(searchKeyword = "", page = 1, per_page = 25) {
       keyword: searchKeyword,
       page: page,
       per_page: per_page,
+      include_existing_personal: 1,
     });
 
     // Update all pagination state from API response

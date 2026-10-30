@@ -154,6 +154,19 @@ export const useRecentChatsStore = defineStore("recentChats", {
         })
         .listen(".MessageDeleted", async ({ message_id }) => {
           this.removeChatMessage(chatId, message_id);
+        })
+        .listen(".MessagesSeen", ({ message_ids, seen_at }) => {
+          const chat = this.getChatById(chatId);
+          if (!chat) {
+            return;
+          }
+
+          const seenMessageIds = new Set(message_ids.map(Number));
+          for (const message of chat.messages) {
+            if (seenMessageIds.has(Number(message.id))) {
+              message.seen_at = seen_at;
+            }
+          }
         });
 
       // Mark as subscribed
